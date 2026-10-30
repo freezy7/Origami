@@ -1,0 +1,15 @@
+# macOS
+.DS_Store
+
+# Dependencies and generated Cocos output
+node_modules/
+/library/
+/temp/
+/local/
+/build/
+
+# Local secrets and logs
+.env
+.env.*
+!.env.example
+*.log
