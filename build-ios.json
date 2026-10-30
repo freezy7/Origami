@@ -1,0 +1,27 @@
+{
+  "name": "Origami",
+  "platform": "ios",
+  "buildPath": "project://build",
+  "outputName": "ios",
+  "debug": true,
+  "startScene": "218a3f74-b8a7-45d3-bc43-57ec11b1f25f",
+  "scenes": [
+    {
+      "url": "db://assets/scenes/Origami.scene",
+      "uuid": "218a3f74-b8a7-45d3-bc43-57ec11b1f25f"
+    }
+  ],
+  "packages": {
+    "ios": {
+      "packageName": "com.freezy7.origami",
+      "orientation": {
+        "portrait": true,
+        "upsideDown": false,
+        "landscapeLeft": false,
+        "landscapeRight": false
+      },
+      "targetVersion": "15.0",
+      "skipUpdateXcodeProject": false
+    }
+  }
+}

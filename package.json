@@ -1,0 +1,22 @@
+{
+  "name": "origami",
+  "version": "0.1.0",
+  "private": true,
+  "description": "An origami puzzle journal \u2014 iOS prototype",
+  "creator": {
+    "version": "3.8.8"
+  },
+  "uuid": "76f506ec-668b-4d31-856a-0d4c42e3c7d0",
+  "scripts": {
+    "test": "node --import tsx --test tests/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "build:ios": "node scripts/build.mjs ios",
+    "build:preview": "node scripts/build.mjs web-mobile",
+    "build:ios:simulator": "npm run build:ios && node scripts/ios-simulator.mjs",
+    "test:ios": "node scripts/test-ios.mjs"
+  },
+  "devDependencies": {
+    "tsx": "4.20.6",
+    "typescript": "5.9.3"
+  }
+}

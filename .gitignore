@@ -13,3 +13,11 @@ node_modules/
 .env.*
 !.env.example
 *.log
+
+# Local build and test artifacts
+/.cache/
+/artifacts/
+/*.xcresult
+/profiles/
+/native/engine/common/localCfg.cmake
+/settings/v2/packages/information.json
