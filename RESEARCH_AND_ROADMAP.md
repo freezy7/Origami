@@ -1,6 +1,6 @@
 # 折纸推理与收藏游戏：调研及实现路线
 
-调研日期：2026-10-30。项目名称为 Origami，远端仓库为 https://github.com/freezy7/Origami。本仓库当前包含调研与原型规划，尚未实现游戏，也未完成引擎实测或竞品试玩。第一阶段执行规格见 [PROTOTYPE_PLAN.md](PROTOTYPE_PLAN.md)。
+调研日期：2026-10-30。项目名称为 Origami，远端仓库为 https://github.com/freezy7/Origami。本文件保留立项调研和中期路线；仓库已实现 Paper Puppy 单关原型。第一阶段执行规格见 [PROTOTYPE_PLAN.md](PROTOTYPE_PLAN.md)，实际验证结果见 [BUILD_VALIDATION.md](BUILD_VALIDATION.md)，继续开发入口见 [PROJECT_STATUS.md](PROJECT_STATUS.md)。竞品安装试玩尚未完成。
 
 > 最新执行范围（2026-10-30）：由 Codex 直接开发，第一阶段仅验收 iOS，微信后移。下文工作日／月份为历史立项估算，当前执行与验收以 [PROTOTYPE_PLAN.md](PROTOTYPE_PLAN.md) 为准。
 

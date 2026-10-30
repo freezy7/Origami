@@ -33,6 +33,39 @@
 #import "platform/ios/AppDelegateBridge.h"
 #import "service/SDKWrapper.h"
 
+@interface AppDelegate ()
+@property(nonatomic, copy) NSDictionary *origamiLaunchOptions;
+@property(nonatomic, assign) BOOL origamiEngineStarted;
+- (void)connectWindowScene:(UIWindowScene *)scene;
+@end
+
+// Cocos 3.8.8 still exposes an application-delegate bridge. Own the window in
+// a single UIKit scene and forward that scene's lifecycle to the existing bridge.
+@interface OrigamiSceneDelegate : NSObject <UIWindowSceneDelegate>
+@property(nonatomic, strong) UIWindow *window;
+@end
+
+@implementation OrigamiSceneDelegate
+- (void)scene:(UIScene *)scene willConnectToSession:(UISceneSession *)session options:(UISceneConnectionOptions *)options {
+    if (![scene isKindOfClass:UIWindowScene.class]) return;
+    AppDelegate *delegate = (AppDelegate *)UIApplication.sharedApplication.delegate;
+    [delegate connectWindowScene:(UIWindowScene *)scene];
+    self.window = delegate.window;
+}
+- (void)sceneWillResignActive:(UIScene *)scene {
+    [(AppDelegate *)UIApplication.sharedApplication.delegate applicationWillResignActive:UIApplication.sharedApplication];
+}
+- (void)sceneDidBecomeActive:(UIScene *)scene {
+    [(AppDelegate *)UIApplication.sharedApplication.delegate applicationDidBecomeActive:UIApplication.sharedApplication];
+}
+- (void)sceneDidEnterBackground:(UIScene *)scene {
+    [(AppDelegate *)UIApplication.sharedApplication.delegate applicationDidEnterBackground:UIApplication.sharedApplication];
+}
+- (void)sceneWillEnterForeground:(UIScene *)scene {
+    [(AppDelegate *)UIApplication.sharedApplication.delegate applicationWillEnterForeground:UIApplication.sharedApplication];
+}
+@end
+
 @implementation AppDelegate
 @synthesize window;
 @synthesize appDelegateBridge;
@@ -44,20 +77,25 @@
     [[SDKWrapper shared] application:application didFinishLaunchingWithOptions:launchOptions];
     appDelegateBridge = [[AppDelegateBridge alloc] init];
     
-    // Add the view controller's view to the window and display.
-    CGRect bounds = [[UIScreen mainScreen] bounds];
-    self.window   = [[UIWindow alloc] initWithFrame:bounds];
-
-    // Should create view controller first, cc::Application will use it.
-    _viewController                           = [[ViewController alloc] init];
-    _viewController.view                      = [[View alloc] initWithFrame:bounds];
-    _viewController.view.contentScaleFactor   = UIScreen.mainScreen.scale;
-    _viewController.view.multipleTouchEnabled = true;
-    [self.window setRootViewController:_viewController];
-
-    [self.window makeKeyAndVisible];
-    [appDelegateBridge application:application didFinishLaunchingWithOptions:launchOptions];
+    self.origamiLaunchOptions = launchOptions;
     return YES;
+}
+
+- (void)connectWindowScene:(UIWindowScene *)scene {
+    self.window = [[UIWindow alloc] initWithWindowScene:scene];
+    if (!_viewController) {
+        _viewController = [[ViewController alloc] init];
+        _viewController.view = [[View alloc] initWithFrame:scene.coordinateSpace.bounds];
+        _viewController.view.contentScaleFactor = scene.screen.scale;
+        _viewController.view.multipleTouchEnabled = true;
+    }
+    self.window.rootViewController = _viewController;
+    [self.window makeKeyAndVisible];
+    if (!self.origamiEngineStarted) {
+        [appDelegateBridge application:UIApplication.sharedApplication didFinishLaunchingWithOptions:self.origamiLaunchOptions];
+        self.origamiEngineStarted = YES;
+        self.origamiLaunchOptions = nil;
+    }
 }
 
 - (void)applicationWillResignActive:(UIApplication *)application {
@@ -66,7 +104,7 @@
      Use this method to pause ongoing tasks, disable timers, and throttle down OpenGL ES frame rates. Games should use this method to pause the game.
      */
     [[SDKWrapper shared] applicationWillResignActive:application];
-    [appDelegateBridge applicationWillResignActive:application];
+    if (self.origamiEngineStarted) [appDelegateBridge applicationWillResignActive:application];
 }
 
 - (void)applicationDidBecomeActive:(UIApplication *)application {
@@ -74,7 +112,7 @@
      Restart any tasks that were paused (or not yet started) while the application was inactive. If the application was previously in the background, optionally refresh the user interface.
      */
     [[SDKWrapper shared] applicationDidBecomeActive:application];
-    [appDelegateBridge applicationDidBecomeActive:application];
+    if (self.origamiEngineStarted) [appDelegateBridge applicationDidBecomeActive:application];
 }
 
 - (void)applicationDidEnterBackground:(UIApplication *)application {
@@ -94,7 +132,7 @@
 
 - (void)applicationWillTerminate:(UIApplication *)application {
     [[SDKWrapper shared] applicationWillTerminate:application];
-    [appDelegateBridge applicationWillTerminate:application];
+    if (self.origamiEngineStarted) [appDelegateBridge applicationWillTerminate:application];
 }
 
 #pragma mark -

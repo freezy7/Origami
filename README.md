@@ -16,12 +16,13 @@
 
 - [竞品、技术评估与中期路线](RESEARCH_AND_ROADMAP.md)
 - [第一阶段：iOS 可玩原型计划](PROTOTYPE_PLAN.md)
+- [项目概况与继续开发入口](PROJECT_STATUS.md)
 
 ## 仓库与本地目录
 
 - 远端：<https://github.com/freezy7/Origami>
 - 默认分支：`main`
-- 正确的本地目录：`/Users/nikki/house/github/Origami`
+- 当前工作目录：`/Users/protonclaw/Projects/Origami`；构建脚本从仓库根目录运行，不依赖特定用户名。
 
 ```sh
 git clone https://github.com/freezy7/Origami.git
