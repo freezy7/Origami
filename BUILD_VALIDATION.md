@@ -1,5 +1,7 @@
 # 原型构建与验证记录
 
+本文件是上一轮原生启动收尾的历史记录；最新游戏体验、10 项核心测试与设备验证见 [NEXT_ROUND_VALIDATION.md](NEXT_ROUND_VALIDATION.md)。
+
 日期：2026-10-30。收尾基线：`ab7cc3a`（`update`）。本轮补完该提交尚未结束的 iOS 导出、原生运行与闭环验证，没有扩展关卡或平台。
 
 ## 本轮实际环境
@@ -41,11 +43,11 @@ UI 流程实际覆盖：初始状态、第一步折叠、进入后台再返回�
 - 模拟器应用：`build/ios-simulator/proj/Debug-iphonesimulator/Origami-mobile.app`，本机 Debug 产物约 97 MB，不是发行包体。
 - 最终通过的完整结果：`build/OrigamiSmoke-1793371595804.xcresult`，含测试轨迹与原始附件。
 - [UI 测试结果摘要](docs/validation/2026-10-30/test-summary.json)。
-- [初始画面](docs/validation/2026-10-30/01-studio.png)、[错误折法](docs/validation/2026-10-30/02-wrong-fold.png)、[通关](docs/validation/2026-10-30/03-completed.png)。
-- [暂停教程](docs/validation/2026-10-30/04-paused-tutorial.png)、[教程终点](docs/validation/2026-10-30/05-tutorial-completed.png)、[收藏](docs/validation/2026-10-30/06-journal.png)。
-- [重启恢复](docs/validation/2026-10-30/07-restored.png)、[中文画面](docs/validation/2026-10-30/08-chinese-studio.png)、[恢复待玩状态](docs/validation/2026-10-30/09-ready-to-play.png)。
+- [初始画面](artifacts/screenshots/ios/2026-10-30/01-studio.png)、[错误折法](artifacts/screenshots/ios/2026-10-30/02-wrong-fold.png)、[通关](artifacts/screenshots/ios/2026-10-30/03-completed.png)。
+- [暂停教程](artifacts/screenshots/ios/2026-10-30/04-paused-tutorial.png)、[教程终点](artifacts/screenshots/ios/2026-10-30/05-tutorial-completed.png)、[收藏](artifacts/screenshots/ios/2026-10-30/06-journal.png)。
+- [重启恢复](artifacts/screenshots/ios/2026-10-30/07-restored.png)、[中文画面](artifacts/screenshots/ios/2026-10-30/08-chinese-studio.png)、[恢复待玩状态](artifacts/screenshots/ios/2026-10-30/09-ready-to-play.png)。
 
-`build/`、`temp/`、`library/`、`.cache/` 和 `artifacts/` 是忽略的本地产物；可保留的截图与结果摘要在 `docs/validation/2026-10-30/`。本地构建日志位于 `.cache/build-ios.log`、`.cache/build-simulator.log`、`.cache/test-ios.log`。
+截图按最新约定统一保存在忽略的 `artifacts/screenshots/` 下，不再提交；上述截图链接仅在保有本地产物的机器上有效。文本结果摘要保留在 `docs/validation/2026-10-30/test-summary.json`。`npm run test:ios` 会自动导出截图至 `artifacts/screenshots/ios/<运行编号>/`，完整 xcresult 仍在忽略的 `build/` 中。`temp/`、`library/`、`.cache/` 同样为忽略的本地产物。本地构建日志位于 `.cache/build-ios.log`、`.cache/build-simulator.log`、`.cache/test-ios.log`。
 
 从干净仓库执行 README 中的 `npm ci` → `npm run build:ios:simulator` → `npm run typecheck` → 指定模拟器运行 `npm run test:ios`，可重建上述链路。测试只重置 `com.freezy7.origami` 的本地原型进度；不会重置整个模拟器。
 

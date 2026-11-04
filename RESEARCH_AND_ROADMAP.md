@@ -1,5 +1,7 @@
 # 折纸推理与收藏游戏：调研及实现路线
 
+> 2026-10-31 方向更新：本文件保留预设折法游戏的历史研究／计划。用户已明确改为真实纸艺模拟器，当前以 [PAPER_SIMULATOR_SPEC.md](PAPER_SIMULATOR_SPEC.md) 和 [PAPER_SIMULATOR_TECHNICAL_PLAN.md](PAPER_SIMULATOR_TECHNICAL_PLAN.md) 为准；本文的旧产品范围、扩关顺序和“不以通用纸张物理为前置”等建议不再作为当前执行要求。
+
 调研日期：2026-10-30。项目名称为 Origami，远端仓库为 https://github.com/freezy7/Origami。本文件保留立项调研和中期路线；仓库已实现 Paper Puppy 单关原型。第一阶段执行规格见 [PROTOTYPE_PLAN.md](PROTOTYPE_PLAN.md)，实际验证结果见 [BUILD_VALIDATION.md](BUILD_VALIDATION.md)，继续开发入口见 [PROJECT_STATUS.md](PROJECT_STATUS.md)。竞品安装试玩尚未完成。
 
 > 最新执行范围（2026-10-30）：由 Codex 直接开发，第一阶段仅验收 iOS，微信后移。下文工作日／月份为历史立项估算，当前执行与验收以 [PROTOTYPE_PLAN.md](PROTOTYPE_PLAN.md) 为准。

@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, mkdirSync } from 'node:fs';
 const run=(program,args,capture=false)=>{
   const r=spawnSync(program,args,{stdio:capture?'pipe':'inherit',encoding:'utf8'});
   if(r.status!==0){if(capture)console.error(r.stderr);process.exit(r.status??1);}return r.stdout;
@@ -16,6 +16,14 @@ console.log('UI tests reset ONLY the local com.freezy7.origami prototype data.')
 spawnSync('xcrun',['simctl','uninstall',udid,'com.freezy7.origami'],{stdio:'ignore'});
 run('xcrun',['simctl','install',udid,app]);
 const files=readdirSync('build/UITestData/Build/Products').filter(f=>f.startsWith('OrigamiSmoke_')&&f.endsWith('.xctestrun')).sort();
-const result=`build/OrigamiSmoke-${Date.now()}.xcresult`;
-run('xcodebuild',['test-without-building','-xctestrun',`build/UITestData/Build/Products/${files.at(-1)}`,'-destination',`id=${udid}`,'-resultBundlePath',result]);
-console.log(`Passed. Results and screenshot attachments: ${result}`);
+const runId=Date.now();
+const result=`build/OrigamiSmoke-${runId}.xcresult`;
+const screenshots=`artifacts/screenshots/${process.env.IOS_TEST_ONLY?.includes('PaperLab')?'paper-simulator':'ios'}/${runId}`;
+const tested=spawnSync('xcodebuild',['test-without-building','-xctestrun',`build/UITestData/Build/Products/${files.at(-1)}`,'-destination',`id=${udid}`,'-resultBundlePath',result,...(process.env.IOS_TEST_ONLY?[`-only-testing:${process.env.IOS_TEST_ONLY}`]:[]),...(process.env.IOS_TEST_DIAGNOSTICS?['-collect-test-diagnostics',process.env.IOS_TEST_DIAGNOSTICS]:[])],{stdio:'inherit'});
+if(existsSync(result)){
+  mkdirSync(screenshots,{recursive:true});
+  run('xcrun',['xcresulttool','export','attachments','--path',result,'--output-path',screenshots]);
+  console.log(`Local screenshots (git-ignored): ${screenshots}`);
+}
+if(tested.status!==0)process.exit(tested.status??1);
+console.log(`Passed. Results: ${result}`);

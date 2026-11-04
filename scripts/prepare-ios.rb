@@ -19,8 +19,10 @@ test_path = File.join(root, 'build/OrigamiSmoke.xcodeproj')
 FileUtils.rm_rf(test_path) if File.directory?(test_path)
 tests = Xcodeproj::Project.new(test_path)
 target = tests.new_target(:ui_test_bundle, 'OrigamiSmoke', :ios, '15.0')
-file = tests.main_group.new_file(File.join(root, 'tests/ios/OrigamiSmokeTests.swift'))
-target.source_build_phase.add_file_reference(file)
+Dir[File.join(root, 'tests/ios/*.swift')].sort.each do |source|
+  file = tests.main_group.new_file(source)
+  target.source_build_phase.add_file_reference(file)
+end
 target.build_configurations.each do |config|
   config.build_settings['SWIFT_VERSION'] = '5.0'
   config.build_settings['PRODUCT_BUNDLE_IDENTIFIER'] = 'com.freezy7.origami.smoke'

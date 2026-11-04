@@ -1,0 +1,17 @@
+{
+  "name": "OrigamiWeb",
+  "platform": "web-mobile",
+  "buildPath": "project://build",
+  "outputName": "web-mobile",
+  "debug": true,
+  "startScene": "218a3f74-b8a7-45d3-bc43-57ec11b1f25f",
+  "scenes": [
+    {
+      "url": "db://assets/scenes/Origami.scene",
+      "uuid": "218a3f74-b8a7-45d3-bc43-57ec11b1f25f"
+    }
+  ],
+  "packages": {
+    "web-mobile": { "orientation": "auto", "embedWebDebugger": false }
+  }
+}

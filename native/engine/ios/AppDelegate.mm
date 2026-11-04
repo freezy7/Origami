@@ -155,10 +155,41 @@
         id delegate = UIApplication.sharedApplication.delegate;
         UIWindow *window = [delegate window];
         UIView *view = window.rootViewController.view;
-        view.isAccessibilityElement = YES;
-        view.accessibilityIdentifier = @"origami-state";
-        view.accessibilityLabel = @"Origami paper journal";
-        view.accessibilityValue = state;
+        // Keep the scene summary separate from a direct-interaction paper
+        // region, so assistive technology and native gestures target the sheet.
+        static UIView *owner = nil;
+        static UIAccessibilityElement *summary = nil, *paperCenter = nil;
+        if (owner != view) {
+            [summary release];
+            [paperCenter release];
+            owner = view;
+            summary = [[UIAccessibilityElement alloc] initWithAccessibilityContainer:view];
+            paperCenter = [[UIAccessibilityElement alloc] initWithAccessibilityContainer:view];
+        }
+        view.isAccessibilityElement = NO;
+        view.accessibilityIdentifier = nil;
+        summary.accessibilityIdentifier = @"origami-state";
+        summary.accessibilityLabel = @"Origami paper journal";
+        summary.accessibilityValue = state;
+        summary.accessibilityFrame = UIAccessibilityConvertFrameToScreenCoordinates(view.bounds, view);
+        NSRange focus = [state rangeOfString:@"|focus:"];
+        if (focus.location != NSNotFound) {
+            NSString *field = [[[state substringFromIndex:NSMaxRange(focus)] componentsSeparatedByString:@"|"] firstObject];
+            NSArray *rect = [field componentsSeparatedByString:@","];
+            if (rect.count == 4) {
+                CGFloat scale = view.bounds.size.width / 390.;
+                CGRect area = CGRectMake([rect[0] doubleValue]*scale, [rect[1] doubleValue]*scale,
+                                         [rect[2] doubleValue]*scale, [rect[3] doubleValue]*scale);
+                paperCenter.accessibilityIdentifier = @"origami-paper-center";
+                paperCenter.accessibilityLabel = @"纸张中央抓持区";
+                paperCenter.accessibilityHint = @"拖动抓纸，两个触点可分别抓持";
+                paperCenter.accessibilityTraits = UIAccessibilityTraitAllowsDirectInteraction;
+                paperCenter.accessibilityFrame = UIAccessibilityConvertFrameToScreenCoordinates(area, view);
+                view.accessibilityElements = @[paperCenter, summary];
+                return;
+            }
+        }
+        view.accessibilityElements = @[summary];
     });
 }
 @end

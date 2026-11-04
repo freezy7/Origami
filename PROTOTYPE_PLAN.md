@@ -1,5 +1,9 @@
 # 第一阶段：iOS 可玩原型
 
+> 2026-10-31 方向更新：本文件保留预设折法游戏的历史研究／计划。用户已明确改为真实纸艺模拟器，当前以 [PAPER_SIMULATOR_SPEC.md](PAPER_SIMULATOR_SPEC.md) 和 [PAPER_SIMULATOR_TECHNICAL_PLAN.md](PAPER_SIMULATOR_TECHNICAL_PLAN.md) 为准；本文的旧产品范围、扩关顺序和“不以通用纸张物理为前置”等建议不再作为当前执行要求。
+
+后续单关游戏体验升级已执行，当前操作和实际结果见 [NEXT_ROUND_VALIDATION.md](NEXT_ROUND_VALIDATION.md)。以下保留第一阶段技术原型的原始范围。
+
 更新：2026-10-30。开发由 Codex 执行，本阶段只在 iOS 验证；微信适配移至后续阶段。本文件替代此前按独立开发者人工工作日估算的计划。
 
 ## 目标与时间口径

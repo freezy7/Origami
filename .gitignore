@@ -17,6 +17,8 @@ node_modules/
 # Local build and test artifacts
 /.cache/
 /artifacts/
+# All QA screenshots and visual references live under artifacts/screenshots/.
+# Keep them local; application artwork in assets/ and native/ remains tracked.
 /*.xcresult
 /profiles/
 /native/engine/common/localCfg.cmake

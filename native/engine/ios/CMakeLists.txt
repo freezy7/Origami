@@ -18,6 +18,11 @@ set(EXECUTABLE_NAME ${APP_NAME}-mobile)
 cc_ios_before_target(${EXECUTABLE_NAME})
 add_executable(${EXECUTABLE_NAME} ${CC_ALL_SOURCES})
 cc_ios_after_target(${EXECUTABLE_NAME})
+target_sources(${EXECUTABLE_NAME} PRIVATE "${CC_PROJECT_DIR}/OrigamiDeviceInput.mm")
+target_link_libraries(${EXECUTABLE_NAME} "-framework CoreMotion")
+target_sources(${EXECUTABLE_NAME} PRIVATE "${CC_PROJECT_DIR}/OrigamiPaperLab.mm" "${CC_PROJECT_DIR}/../../paper/Sheet.cpp")
+# Benchmark the exact same C++ kernel with optimization in the Debug host.
+set_source_files_properties("${CC_PROJECT_DIR}/../../paper/Sheet.cpp" PROPERTIES COMPILE_OPTIONS "-O2")
 
 # Cocos 3.8.8 aborts when the removed statusBarOrientation API returns Unknown
 # on iOS 27. Compile a project-local copy using the owning window's scene.
@@ -59,4 +64,23 @@ if(ORIGAMI_SIMULATOR)
     set(CMAKE_XCODE_ATTRIBUTE_ARCHS[sdk=iphonesimulator*] "arm64")
     set(CMAKE_XCODE_ATTRIBUTE_VALID_ARCHS[sdk=iphonesimulator*] "arm64")
     set_target_properties(${EXECUTABLE_NAME} PROPERTIES OSX_ARCHITECTURES "arm64")
+endif()
+
+# The legacy device WebP archive contains unaligned members rejected by ld in
+# Xcode 27. Re-archive its arm64 slice locally; preserve the editor's originals.
+if(NOT ORIGAMI_SIMULATOR AND CMAKE_OSX_ARCHITECTURES STREQUAL "arm64")
+    set(_origami_device_imports webp)
+    foreach(_origami_target IN LISTS _origami_device_imports)
+        get_target_property(_origami_location ${_origami_target} IMPORTED_LOCATION)
+        if(_origami_location MATCHES "/libwebp\\.a$")
+            set(_origami_webp_thin "${CMAKE_CURRENT_BINARY_DIR}/OrigamiWebP-arm64.a")
+            set(_origami_webp_aligned "${CMAKE_CURRENT_BINARY_DIR}/OrigamiWebP-aligned.a")
+            execute_process(COMMAND /usr/bin/lipo "${_origami_location}" -thin arm64 -output "${_origami_webp_thin}" RESULT_VARIABLE _origami_thin_result)
+            execute_process(COMMAND /usr/bin/libtool -static -o "${_origami_webp_aligned}" "${_origami_webp_thin}" RESULT_VARIABLE _origami_align_result)
+            if(NOT _origami_thin_result EQUAL 0 OR NOT _origami_align_result EQUAL 0)
+                message(FATAL_ERROR "Could not prepare the local arm64 WebP archive")
+            endif()
+            set_target_properties(${_origami_target} PROPERTIES IMPORTED_LOCATION "${_origami_webp_aligned}")
+        endif()
+    endforeach()
 endif()

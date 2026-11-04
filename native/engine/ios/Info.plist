@@ -26,6 +26,8 @@
 	<string>1.0</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSMotionUsageDescription</key>
+	<string>Use device tilt to gently fold your paper when you enable motion controls.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
