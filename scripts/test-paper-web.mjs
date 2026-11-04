@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { resolve } from "node:path";
+import vm from "node:vm";
 const folder = "artifacts/paper-simulator/web";
 mkdirSync(folder, { recursive: true });
 const compiler = spawnSync(
@@ -10,6 +11,7 @@ const compiler = spawnSync(
   [
     "-std=c++17",
     "-O2",
+    "-ffp-contract=off",
     "native/paper/Sheet.cpp",
     "native/paper/web/Bridge.cpp",
     "tests/paper/web_bridge_driver.cpp",
@@ -146,6 +148,27 @@ const result = {
     "Pause releases transient grip, retains pin",
   ],
 };
+// Execute the shipped worker dispatcher with the real WASM factory. This is
+// an offline protocol check, not a browser/Worker deployment acceptance.
+const replies=[];
+let imports=0;
+const workerSelf={location:{href:'https://test.invalid/kernel/paper-worker.js'},postMessage:q=>replies.push(q)};
+vm.runInNewContext(readFileSync('web/paper-worker.js','utf8'),{
+  self:workerSelf,URL,
+  importScripts(name){assert.equal(name,'paper-kernel.js');imports++;workerSelf.createPaperKernel=()=>factory({wasmBinary:readFileSync('build/web-kernel/paper-kernel.wasm')});},
+});
+const queued=[{op:'reset'},{op:'snapshot'},{op:'load',state:'broken'},{op:'state'},{op:'audit'}];
+queued.forEach((command,i)=>workerSelf.onmessage({data:{id:i+1,command}}));
+const deadline=Date.now()+30000;
+while(replies.length<queued.length&&Date.now()<deadline)await new Promise(resolve=>setTimeout(resolve,5));
+assert.equal(replies.length,queued.length,'Worker queue must complete');
+assert.deepEqual(replies.map(r=>r.id),[1,2,3,4,5]);
+assert.equal(imports,1,'Only one WASM instance per worker');
+assert.ok(replies[1].frame.state.startsWith('PAPER_LAB 2'));
+assert.match(replies[2].error,/./,'Malformed state returns an error');
+assert.deepEqual(replies[3].frame.positions,replies[0].frame.positions,'Queue survives errors without corrupting the sheet');
+assert.equal(replies[4].frame.audit.checked,true);
+result.checks.push('Shipped worker queue, single initialization, snapshot, audit and error recovery');
 writeFileSync(
   `${folder}/kernel-summary.json`,
   JSON.stringify(result, null, 2) + "\n",

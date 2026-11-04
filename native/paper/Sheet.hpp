@@ -19,10 +19,12 @@ struct Material {
 struct Node {
   V uv, p, v;
   double mass = 0;
+  double layer = 0;
 };
 struct Triangle {
   std::array<int, 3> v;
   double area = 0;
+  std::array<double,4> lambda{};
 };
 struct Edge {
   int a, b;
@@ -59,6 +61,11 @@ public:
   std::vector<Edge> edges;
   std::vector<Hinge> hinges;
   std::vector<Handle> handles;
+  std::vector<V> formingTargets;
+  std::vector<double> formingAngles;
+  std::vector<double> formingActual;
+  std::vector<bool> formingActive;
+  bool formingPress = false;
   Statistics stats;
   double fixedDt = 1. / 120;
   int iterations = 12;
@@ -76,6 +83,8 @@ public:
   void step(double h);
   std::string save() const;
   void load(const std::string &text);
+  void drivePose(const std::string &text, bool press);
+  void importMesh(const std::string &text, double elasticRecovery = .08);
   Audit audit() const;
   void measure();
   double potential(const std::vector<V> &x) const;
@@ -83,7 +92,7 @@ public:
 private:
   void rebuild();
   void xpbd(double h);
-  void implicit(double h, const std::vector<V> &predicted);
+  void implicit(double h, const std::vector<V> &predicted, const std::vector<V> &old);
   void solveHandles(double h);
   bool contacts(const std::vector<V> &old);
   void plasticity(double h);

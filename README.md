@@ -4,6 +4,10 @@
 
 ## 当前状态
 
+2026-11-04 材料与试飞实现：新增直接拖翼、V 形合页、折轴平移／旋转、材料 Worker、纸层接触和释放回弹，以及固定场地试飞与记录比较。**完整纸飞机材料验收未通过**：8 步飞机在后续多层成形时停滞，成形偏差约 63 mm；试飞入口已增加形状检查并拦截该纸形。浏览器工具仍拒绝本地地址，本轮新页面尚无实操验收。见 [材料与试飞验收记录](research/paper-simulator/PHYSICS_AND_FLIGHT_2026-11-04.md)。
+
+2026-11-04 几何交互验收：已在 Chrome 从新白纸实操完成 8 折纸飞机，验证双翼独立微调、早期步骤展开、全部展开、刷新恢复和撤销/重做；修复取景移动、同向折翼、选层、假折痕与输入应用等问题。该结果早于本轮材料实现，见 [几何验收记录及边界](research/paper-simulator/AIRPLANE_ACCEPTANCE_2026-11-04.md)。
+
 2026-11-04：Web 默认新增用户自由翻折约束模式，支持直接拖纸角到落点、Shift 压线、连续折角、展开与选层。它是几何操作验证，不代表完整现实纸张物理。已在 Chrome 实际从白纸连续折出双翼纸飞机，并验证保存和刷新恢复，见 [本轮记录](research/paper-simulator/FREE_FOLD_2026-11-03.md)。原薄片物理实验通过 `?physics` 进入。
 
 **已实现 A4 白纸物理研究原型，G1 尚未完整验收。** iOS 默认打开连续抓持、固定、弯曲／压痕和保存实验；旧小狗 Demo 可从界面或启动参数进入。实物材料未校准，固定网格的任意折痕精度和通用接触稳定性仍待验证。剪切、打孔和组装尚未实现。当前结果见 [G1 验证记录](G1_VALIDATION.md)。
@@ -45,11 +49,17 @@ cd Origami
 npm ci
 # 首次需安装并激活 Emscripten，详见 WEB_VALIDATION.md
 npm run build:web
+# 仅验证自由折叠时，无需 Emscripten：
+npm run build:fold-web
 npm run preview:web
 # 浏览器打开 http://127.0.0.1:4173
 npm run test:web-kernel
 npm test
 npm run test:paper
+# 完整纸飞机材料门槛；目前会因多层成形偏差返回失败，禁止自动转入试飞
+npm run test:material-folding
+# 先运行上一命令生成输入，再用实际 WebAssembly 内核复验
+npm run test:material-wasm
 # 运行桌面数值及循环实验，参数未做实物校准
 npm run bench:paper -- --cycles
 # 导出 Cocos 资源，生成并编译 Apple Silicon 模拟器工程

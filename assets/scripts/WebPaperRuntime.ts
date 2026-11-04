@@ -63,6 +63,10 @@ export class WebPaperRuntime {
       pause: 6,
       save: 7,
       load: 8,
+      mesh: 9,
+      audit: 10,
+      form: 11,
+      free: 12,
     };
     if (!(q.op in codes)) throw new Error("未知纸张操作");
     const p = q.target ?? [0, 0, 0];

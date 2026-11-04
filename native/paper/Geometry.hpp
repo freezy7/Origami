@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstdint>
 #include <limits>
+#include <type_traits>
 namespace paper {
 struct V {
   double x = 0, y = 0, z = 0;
@@ -141,16 +142,43 @@ struct Hit {
   Closest feature;
   V normal;
 };
+// A polynomial certificate for separation by the moving feature plane.
+// Squared plane distance >= d^2 becomes a degree-six polynomial. Positive
+// Bernstein coefficients bound it over the whole interval, not just samples.
+// This avoids thousands of tiny distance advances for co-rotating laminates.
+inline bool planeSeparated(const std::array<V,4>&a,const std::array<V,4>&b,double d,bool vf) {
+  V r=a[0]-a[vf?1:2],R=(b[0]-b[vf?1:2])-r;
+  V u=a[vf?2:1]-a[vf?1:0],U=(b[vf?2:1]-b[vf?1:0])-u;
+  V v=a[3]-a[vf?1:2],W=(b[3]-b[vf?1:2])-v;
+  std::array<V,3> n{u.cross(v),u.cross(W)+U.cross(v),U.cross(W)};
+  std::array<double,4> h{};std::array<double,7> f{};std::array<double,5> area{};
+  for(int i=0;i<3;i++){h[i]+=r.dot(n[i]);h[i+1]+=R.dot(n[i]);}
+  for(int i=0;i<4;i++)for(int j=0;j<4;j++)f[i+j]+=h[i]*h[j];
+  for(int i=0;i<3;i++)for(int j=0;j<3;j++)area[i+j]+=n[i].dot(n[j]);
+  for(int i=0;i<5;i++)f[i]-=d*d*area[i];
+  auto positive=[](const auto&power){
+    constexpr int degree=std::tuple_size<std::decay_t<decltype(power)>>::value-1;
+    double scale=0;for(double c:power)scale=std::max(scale,std::abs(c));
+    if(!(scale>0) || !std::isfinite(scale))return false;
+    for(int k=0;k<=degree;k++){
+      double value=0,ratio=1;
+      for(int j=0;j<=k;j++){if(j)ratio*=double(k-j+1)/(degree-j+1);value+=power[j]*ratio;}
+      if(!(value>scale*1e-10))return false;
+    }
+    return true;
+  };
+  return positive(area)&&positive(f);
+}
 // Conservative advancement of linearly moving features. The supplied speed is
 // an upper bound on distance change. Iteration exhaustion is fail-closed.
 inline Hit continuous(const std::array<V, 4> &old, const std::array<V, 4> &now,
-                      double thickness, bool vf) {
-  double speed =
-      vf ? (now[0] - old[0]).norm() +
-               std::max({(now[1] - old[1]).norm(), (now[2] - old[2]).norm(),
-                         (now[3] - old[3]).norm()})
-         : std::max((now[0] - old[0]).norm(), (now[1] - old[1]).norm()) +
-               std::max((now[2] - old[2]).norm(), (now[3] - old[3]).norm());
+                      double thickness, bool vf, V normalHint = {}) {
+  if(planeSeparated(old,now,thickness,vf))return {};
+  std::array<V,4> velocity;
+  for(int i=0;i<4;i++)velocity[i]=now[i]-old[i];
+  double speed=0;
+  if(vf)for(int j=1;j<4;j++)speed=std::max(speed,(velocity[0]-velocity[j]).norm());
+  else for(int i=0;i<2;i++)for(int j=2;j<4;j++)speed=std::max(speed,(velocity[i]-velocity[j]).norm());
   auto at = [&](double t) {
     std::array<V, 4> p;
     for (int i = 0; i < 4; i++)
@@ -160,18 +188,38 @@ inline Hit continuous(const std::array<V, 4> &old, const std::array<V, 4> &now,
   };
   double t = 0;
   Closest q = at(0);
-  V n = q.delta.unit();
-  for (int i = 0; i < 64; i++) {
+  if (normalHint.norm()<1e-14) {
+    normalHint=vf ? (old[2]-old[1]).cross(old[3]-old[1]) : (old[1]-old[0]).cross(old[3]-old[2]);
+  }
+  V n = q.delta.unit(normalHint.unit());
+  // Near-touching layers that rotate together can need many short certified
+  // advances even while remaining separated. Keep the guard conservative,
+  // but do not confuse the old 64-iteration budget with an actual impact.
+  for (int i = 0; i < 1024; i++) {
     q = at(t);
     double gap = q.delta.norm() - thickness;
     if (gap <= std::max(1e-9, thickness * 1e-5))
       return {true, false, t, q, q.delta.unit(n)};
     if (speed < 1e-15)
       return {};
-    double step = .9 * gap / speed;
-    if (t + step > 1)
-      return {};
-    t += step;
+    // A closest-feature normal is a separating axis for two convex features.
+    // Each endpoint projection is linear in time, so its first possible loss
+    // of separation is a certified bound. Tangential co-motion no longer
+    // exhausts iterations just because the Euclidean speed bound is large.
+    V axis=q.delta.unit(n);
+    double bound=std::numeric_limits<double>::infinity();bool valid=true;
+    auto pair=[&](int a,int b){
+      double separation=(lerp(old[a],now[a],t)-lerp(old[b],now[b],t)).dot(axis)-thickness;
+      double closing=(velocity[a]-velocity[b]).dot(axis);
+      if(separation < -1e-9)valid=false;
+      if(closing < -1e-15)bound=std::min(bound,std::max(0.,separation)/(-closing));
+    };
+    if(vf)for(int j=1;j<4;j++)pair(0,j);
+    else for(int a=0;a<2;a++)for(int b=2;b<4;b++)pair(a,b);
+    if(valid && !std::isfinite(bound))return {};
+    double step=.9*(valid && bound>1e-15 ? bound : gap/speed);
+    if(t+step>1)return {};
+    t+=step;
   }
   return {true, true, t, q, q.delta.unit(n)};
 }

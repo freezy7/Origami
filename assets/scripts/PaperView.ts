@@ -13,7 +13,7 @@ import {
   view,
 } from "cc";
 import { Face, Fold, Point, normal } from "./core/PaperModel";
-import { creaseSegment, clamp, XY } from "./core/Interaction";
+import { creaseSegment, XY } from "./core/Interaction";
 const color = (s: string) => new Color().fromHEX(s);
 export class PaperView {
   readonly camera: Camera;
@@ -27,6 +27,7 @@ export class PaperView {
   private target = { x: 0, y: 0, width: 2 };
   private span = 2;
   private aspect = 1;
+  originZ=0;
   yaw = -12;
   pitch = 18;
   zoom = 1;
@@ -117,13 +118,13 @@ export class PaperView {
   }
   applyTransform(): void {
     this.rig.setRotationFromEuler(this.pitch, this.yaw, 0);
-    this.surface.setPosition(-this.center.x, -this.center.y, 0);
+    this.surface.setPosition(-this.center.x, -this.center.y, -this.originZ);
     this.camera.orthoHeight =
       (this.span * 1.25) / (2 * this.aspect * this.zoom);
   }
   orbit(dx: number, dy: number): void {
     this.yaw = ((((this.yaw + dx * 0.55 + 180) % 360) + 360) % 360) - 180;
-    this.pitch = clamp(this.pitch - dy * 0.5, -85, 85);
+    this.pitch = ((((this.pitch - dy * 0.5 + 180) % 360) + 360) % 360) - 180;
     this.applyTransform();
   }
   reset(): void {

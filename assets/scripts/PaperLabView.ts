@@ -20,8 +20,10 @@ export type LabFrame = {
   uv?: number[];
   triangles?: number[];
   creases?: number[][];
+  boundary?: number[][];
   anchors: (PaperAnchor & { target: [number, number, number] })[];
   state?: string;
+  audit?: {checked:boolean;intersections:number;penetration:number};
   solver: string;
   stats: {
     time: number;
@@ -35,6 +37,7 @@ export type LabFrame = {
     contacts: number;
     ccdLimited: number;
     backlog: number;
+    maxSpeed?: number;
   };
 };
 export type PaperPick = {
@@ -155,6 +158,7 @@ export class PaperLabView {
         .filter((e) => e.count === 1)
         .map((e) => [e.a, e.b, 0]);
     }
+    if (frame.boundary) this.boundary = frame.boundary;
     if (frame.creases) this.creases = frame.creases;
     const faces: Face[] = [];
     for (let i = 0; i < this.triangles.length; i += 3)

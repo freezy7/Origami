@@ -1,5 +1,17 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import {airplaneFixture} from './paper/airplane_fixture';
+
+test('complete airplane axis rebuild uses the recorded material face when a grip lies on an old crease',()=>{
+ for(const delta of [-.003,.003]){
+  const p=airplaneFixture(),angles=p.records.map(r=>r.angle),before=p.save();
+  p.moveAxisWorld(7,[.018+delta,-.1485,0],[.018,.10504415587728426,0]);
+  check(p);assert.notEqual(p.save(),before);assert.equal(p.records.length,8);
+  p.records.forEach((r,i)=>close(r.angle,angles[i]));
+  close(p.records[7].crease.a[0],.018+delta);
+  const q=new FreePaper();q.load(p.save());assert.equal(q.save(),p.save());
+ }
+});
 import {
   FreePaper,
   Panel,
@@ -104,6 +116,25 @@ test("consecutive user-defined airplane folds preserve material and open into tw
   assert.ok(p.panels.some((f) => f.points.some((q) => q.p[2] < -0.01)));
   assert.ok(p.panels.some((f) => f.points.some((q) => q.p[2] > 0.01)));
   check(p);
+  assert.equal(p.records.length, 8);
+  // Revisit the first wing after folding the second: both remain editable.
+  p.editFold(6, -Math.PI * 0.52);
+  p.editFold(7, Math.PI * 0.48);
+  check(p);
+  const shaped = p.save();
+  p.unfoldFrom(5);
+  check(p);
+  assert.deepEqual(p.records.map(t=>Math.round(t.angle*180/Math.PI)), [0,180,180,180,180,0,0,0]);
+  p.load(shaped);
+  p.unfoldAll();
+  check(p);
+  for (const f of p.panels) for (const q of f.points) {
+    close(q.p[0], q.uv[0]); close(q.p[1], q.uv[1]); close(q.p[2], 0);
+  }
+  assert.ok(p.creaseSegments(1).length > 0);
+  const flat = new FreePaper(); flat.load(p.save());
+  assert.equal(flat.records.length, 8);
+  p.load(shaped);
   const saved = p.save(),
     copy = new FreePaper();
   copy.load(saved);
@@ -156,4 +187,66 @@ test("a new corner fold beside an unfolded crease tolerates nearby landing posit
     p.preview(Math.PI);
     check(p);
   }
+});
+
+test("finish is idempotent and precision adjustments retain near-flat angles", () => {
+  const p = new FreePaper();
+  fold(p, [0,-0.15,0], [0,0.15,0], [-0.1,0], Math.PI);
+  p.finish(); p.finish();
+  assert.equal(p.records.length, 1); assert.equal(p.folds, 1);
+  p.editFold(0, 179 * Math.PI/180);
+  close(p.records[0].angle, 179*Math.PI/180); check(p);
+  p.editFold(0, .5 * Math.PI/180);
+  close(p.records[0].angle, .5*Math.PI/180);
+  const saved = p.save();
+  const copy = new FreePaper(); copy.load(saved); assert.equal(copy.save(), saved);
+});
+test("incompatible history edits fail atomically and old files retain geometry", () => {
+  const p = new FreePaper();
+  fold(p, [0,-.15,0], [0,.15,0], [-.1,-.13], Math.PI, true);
+  fold(p, [.02,-.15,0], [.02,.15,0], [-.09,-.13], -Math.PI/2);
+  const before = p.save();
+  // Malformed records cannot partially replace a valid paper.
+  const bad = JSON.parse(before); bad.records[0].angle = 99;
+  assert.throws(() => p.load(JSON.stringify(bad))); assert.equal(p.save(),before);
+  const old = JSON.parse(before); delete old.records; delete old.committed; delete old.origin;
+  const migrated = new FreePaper(); migrated.load(JSON.stringify(old));
+  assert.deepEqual(migrated.panels,p.panels);
+  migrated.preview(0); check(migrated);
+});
+
+test("crossing hinge edits reject tears without changing any fold", () => {
+  const p = new FreePaper();
+  fold(p, [0,-.15,0], [0,.15,0], [-.1,-.13], Math.PI, true);
+  fold(p, [-.11,0,0], [.11,0,0], [.08,.13], Math.PI, true);
+  const saved = p.save();
+  assert.throws(() => p.editFold(0, Math.PI/2), /联动/);
+  assert.equal(p.save(), saved);
+  p.unfoldAll(); check(p);
+});
+
+test("hinge can be repositioned and rotated with topology rebuilt atomically", () => {
+  const p=new FreePaper();
+  fold(p,[0,-.15,0],[0,.15,0],[-.1,-.13],Math.PI);
+  const area=p.panels.reduce((a,f)=>a+materialArea(f),0);
+  p.moveAxis(0,[.006,-.1485],[.012,.1485]);
+  check(p);
+  close(p.panels.reduce((a,f)=>a+materialArea(f),0),area);
+  assert.equal(p.records.length,1);
+  const pose=p.foldPose(0);
+  close(pose.crease.a[0],.006);close(pose.crease.b[0],.012);
+  const before=p.save();
+  assert.throws(()=>p.moveAxis(0,[2,0],[2,.2]));assert.equal(p.save(),before);
+  const copy=new FreePaper();copy.load(before);assert.equal(copy.save(),before);
+});
+
+test("body hinge can open into a V without erasing two authored wing folds", () => {
+  const p=new FreePaper();
+  fold(p,[0,-.15,0],[0,.15,0],[-.1,-.13],Math.PI,true);
+  fold(p,[.02,-.15,0],[.02,.15,0],[-.09,-.13],Math.PI/2);
+  fold(p,[.02,-.15,0],[.02,.15,0],[.09,-.13],-Math.PI/2);
+  p.editFold(0,150*Math.PI/180);
+  check(p);assert.equal(p.records.length,3);
+  close(p.records[1].angle,Math.PI/2);close(p.records[2].angle,-Math.PI/2);
+  assert.equal(p.foldPose(0).moving.length>0,true);
 });

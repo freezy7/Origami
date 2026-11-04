@@ -33,6 +33,34 @@ static std::string stackState(int layers) {
 int main() {
   try {
     {
+      auto frictionStack=[](double friction){
+        Sheet s(2);s.load(stackState(2));s.material.friction=friction;s.gravity=true;
+        for(int j=0;j<3;j++){
+          s.nodes[j+3].p.z=s.nodes[j].p.z+s.material.thickness*1.02;
+          s.nodes[j+3].v={.02,0,0};
+          s.setHandle(s.anchor(s.nodes[j].uv.x,s.nodes[j].uv.y,-j-1,s.nodes[j].p,true));
+        }
+        for(int i=0;i<120;i++)s.step(1./240);
+        return s;
+      };
+      auto free=frictionStack(0),held=frictionStack(.35);
+      double freeShift=0,heldShift=0;
+      for(int j=0;j<3;j++){
+        const double x=j==0?-.04:j==1?.04:0;
+        freeShift+=(free.nodes[j+3].p.x-x)/3;heldShift+=(held.nodes[j+3].p.x-x)/3;
+      }
+      check(freeShift>.001,"friction fixture must actually slide without friction");
+      check(std::abs(heldShift)<freeShift*.01,"implicit contact friction retains a compressed layer");
+      check(held.audit().intersections==0&&held.audit().penetration<held.material.thickness*.02,"friction must not trade sticking for penetration");
+      const auto saved=held.save();Sheet restored(2);restored.load(saved);
+      check(restored.save()==saved,"compressed-layer state and material restore exactly");
+      restored.gravity=false;
+      const double x0=restored.nodes[3].p.x;
+      for(int j=3;j<6;j++){restored.nodes[j].p.z=.03;restored.nodes[j].v={.02,0,0};}
+      for(int i=0;i<10;i++)restored.step(1./240);
+      check(restored.nodes[3].p.x>x0+.0001,"lifting a layer releases friction rather than permanently welding it");
+    }
+    {
       Sheet s(7);
       check(std::abs(s.stats.area - .15 * .15) < 1e-12, "rest area");
       check(std::abs(s.stats.mass - .15 * .15 * .08) < 1e-12,
@@ -76,6 +104,20 @@ int main() {
           b = a;
       b[0].z = b[1].z = -.1;
       check(continuous(a, b, .001, false).hit, "EE CCD catches crossed edges");
+    }
+    {
+      const double d=.00015,angle=.05;
+      for(bool vf:{true,false}) {
+        std::array<V,4>a=vf?std::array<V,4>{{{0,0,d*1.02},{-.02,-.02,0},{.02,-.02,0},{0,.02,0}}}:std::array<V,4>{{{-.02,0,d*1.02},{.02,0,d*1.02},{0,-.02,0},{0,.02,0}}};
+        auto b=a;for(auto&p:b)p={p.x*std::cos(angle)+p.z*std::sin(angle),p.y,-p.x*std::sin(angle)+p.z*std::cos(angle)};
+        check(planeSeparated(a,b,d,vf),"rotating near-contact layers have a full-interval separation certificate");
+        check(!continuous(a,b,d,vf).hit,"co-rotating separated layers are not false impacts");
+        for(int i=0;i<=100;i++){
+          std::array<V,4>p;for(int j=0;j<4;j++)p[j]=lerp(a[j],b[j],i/100.);
+          auto q=vf?pointTriangle(p[0],p[1],p[2],p[3]):edgeEdge(p[0],p[1],p[2],p[3]);
+          check(q.delta.norm()>d,"independent closest-feature samples validate the rotation fixture");
+        }
+      }
     }
     {
       Sheet s(5);
@@ -193,6 +235,34 @@ int main() {
       }
       check(s.save() == saved,
             "capacity rejection leaves existing pins intact");
+    }
+    {
+      std::array<V,4>a{{{.2,.2,.0011},{0,0,0},{1,0,0},{0,1,0}}},b=a;
+      b[0].x+=.3;b[0].y+=.3;
+      auto hit=continuous(a,b,.001,true);
+      check(!hit.hit && !hit.limited,"tangential near-contact motion has a separating-axis certificate");
+      for(int i=0;i<4;i++)b[i]=a[i]+V{2,-3,1};
+      check(!continuous(a,b,.001,true).hit,"common rigid translation must not exhaust CCD iterations");
+    }
+    {
+      std::ostringstream mesh;mesh<<std::setprecision(17)<<"PAPER_MESH 1\n4 2\n";
+      V uv[]={{0,0,0},{.1,0,0},{0,.1,0},{.1,.1,0}};
+      V axis=(uv[2]-uv[1]).unit(),r=uv[3]-uv[1];
+      V bent=uv[1]+r*std::cos(.7)+axis.cross(r)*std::sin(.7)+axis*(axis.dot(r)*(1-std::cos(.7)));
+      for(int i=0;i<4;i++){V p=i==3?bent:uv[i];p.z+=.2;mesh<<uv[i].x<<' '<<uv[i].y<<' '<<p.x<<' '<<p.y<<' '<<p.z<<'\n';}
+      mesh<<"0 1 2\n1 3 2\n";Sheet s(2);s.importMesh(mesh.str(),.2);
+      check(std::abs(s.stats.mass-.01*.08)<1e-12,"imported material mass uses UV area");
+      const double rest=s.hinges[0].rest;
+      auto angle=[&](){auto&h=s.hinges[0];return dihedral(s.nodes[h.v[0]].p,s.nodes[h.v[1]].p,s.nodes[h.v[2]].p,s.nodes[h.v[3]].p).value;};
+      double before=std::abs(wrap(angle()-rest)),best=before;
+      for(int i=0;i<3;i++){auto h=s.anchor(uv[i].x,uv[i].y,-i-1,s.nodes[i].p,true);s.setHandle(h);}
+      for(int i=0;i<120;i++){s.step(1./240);best=std::min(best,std::abs(wrap(angle()-rest)));}
+      check(best<before*.8,"released hinge springs toward the plastic rest angle");
+      check(std::abs(s.hinges[0].rest-rest)<1e-8,"elastic release preserves the plastic crease");
+      check(s.audit().intersections==0,"elastic release stays connected without crossings");
+      const auto saved=s.save();try{s.importMesh("PAPER_MESH 1\n4 2\n",.2);check(false,"bad mesh must reject");}catch(const std::runtime_error&){}
+      check(s.save()==saved,"bad material import is atomic");
+      Sheet copy(2);copy.load(saved);check(copy.save()==saved,"deformed plastic material round trip");
     }
     std::cout << "PASS " << checks << " checks\n";
     return 0;
